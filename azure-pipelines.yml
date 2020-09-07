@@ -1,41 +1,24 @@
-# Docker
-# Build a Docker image 
-# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
-
+# Starter pipeline
+pool:
+  vmImage: 'ubuntu-latest'
 trigger:
 - master
+steps:
+- task: CmdLine@2
+  inputs:
+    script: 'chmod -R 777 ./'
+    script: 'chmod -R 755 ./'
+  displayName: 'Set Permissions'
 
-resources:
-- repo: self
-
-variables:
-  tag: '$(Build.BuildId)'
-
-stages:
-- stage: Build
-  displayName: Build and Push image
-  jobs:  
-  - job: Build
-    displayName: Build and Push
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-       - task: Docker@2
-         inputs:
-           containerRegistry: 'Dockerhub'
-           repository: 'ghoshasish99/cits-test'
-           command: 'buildAndPush'
-           Dockerfile: '**/Dockerfile'
-           
-       - task: CopyFiles@2
-         inputs:
-           Contents: 'docker-compose.yml'
-           TargetFolder: '$(Build.ArtifactStagingDirectory)'
-           
-       - task: PublishBuildArtifacts@1
-         inputs:
-           PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-           ArtifactName: 'drop'
-           publishLocation: 'Container'
-      
-           
+- task: CmdLine@2
+  inputs:
+    script: './Run.command -run -project_location $(ProjectLocation) -release $(ReleaseName) -testset $(TestSetName)'
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+  displayName: 'Execute CITS Test' 
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: '$(ProjectLocation)/Results/TestExecution/$(ReleaseName)/$(TestSetName)/Latest/junit.xml'
+    failTaskOnFailedTests: true
+    testRunTitle: 'API Test Run'
+  displayName: 'Publish Reports'
